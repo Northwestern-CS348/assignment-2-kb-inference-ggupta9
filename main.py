@@ -14,7 +14,7 @@ class KBTest(unittest.TestCase):
         for item in data:
             if isinstance(item, Fact) or isinstance(item, Rule):
                 self.KB.kb_assert(item)
-        
+
     def test1(self):
         # Did the student code contain syntax errors, AttributeError, etc.
         ask1 = read.parse_input("fact: (motherof ada ?X)")
@@ -31,7 +31,7 @@ class KBTest(unittest.TestCase):
         self.assertEqual(str(answer[1]), "?X : chen")
 
     def test3(self):
-        # Does retract actually retract things 
+        # Does retract actually retract things
         r1 = read.parse_input("fact: (motherof ada bing)")
         print(' Retracting', r1)
         self.KB.kb_retract(r1)
@@ -57,7 +57,7 @@ class KBTest(unittest.TestCase):
         answer = self.KB.kb_ask(ask1)
         self.assertEqual(str(answer[0]), "?X : felix")
         self.assertEqual(str(answer[1]), "?X : chen")
-        
+
     def test5(self):
         # makes sure retract does not deal with rules
         ask1 = read.parse_input("fact: (parentof ada ?X)")

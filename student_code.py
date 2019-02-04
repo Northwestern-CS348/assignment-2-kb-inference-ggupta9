@@ -126,9 +126,44 @@ class KnowledgeBase(object):
             None
         """
         printv("Retracting {!r}", 0, verbose, [fact_or_rule])
-        ####################################################
-        # Student code goes here
-        
+        if isinstance(fact_or_rule, Fact): #Checking to see if it is a fact
+            if not fact_or_rule in self.facts: #Checking to see if it is in the DB
+                return
+            factRetract = self._get_fact(fact_or_rule) #Create fact to retract/remove
+            if not factRetract.supported_by: #If fact not supported_by
+
+                for p in factRetract.supported_by:
+                    for q in p:
+                        q.supports_facts.remove(factRetract) #Remove factRetract from all supporting facts
+
+                for r in factRetract.supports_facts:
+                    r.supported_by = [p for p in r.supported_by if p[0]!=factRetract]
+                    self.kb_retract(r) #Remove the retracted fact from the fact it supports
+
+                for s in factRetract.supports_rules:
+                    s.supported_by = [p for p in s.supported_by if p[0]!=factRetract]
+                    self.kb_retract(s) #Remove the rules the fact supports
+                self.facts.remove(factRetract) #Remove the fact
+
+        elif isinstance(fact_or_rule, Rule): #Checking to see if it is a rule
+            if not fact_or_rule in self.facts: #Checking to see if it is in the DB
+                return
+            ruleRetract = self._get_rule(fact_or_rule) #Create rule to retract/remove
+            if not ruleRetract.asserted: #If rule not asserted
+
+                for p in ruleRetract.supported_by:
+                    for q in p:
+                        q.supports_rules.remove(ruleRetract) #Remove ruleRetract from all supporting rules
+
+                for r in ruleRetract.supports_facts:
+                    r.supported_by = [p for p in r.supported_by if p[1]!=ruleRetract]
+                    self.kb_retract(r) #Remove the retracted rule from the fact it supports
+
+                for s in ruleRetract.supports_rules:
+                    s.supported_by = [p for p in s.supported_by if pair[1]!=ruleRetract]
+                    self.kb_retract(s) #Remove the rules the fact supports
+                self.rules.remove(ruleRetract) #Remove the rule
+
 
 class InferenceEngine(object):
     def fc_infer(self, fact, rule, kb):
@@ -140,9 +175,31 @@ class InferenceEngine(object):
             kb (KnowledgeBase) - A KnowledgeBase
 
         Returns:
-            Nothing            
+            Nothing
         """
         printv('Attempting to infer from {!r} and {!r} => {!r}', 1, verbose,
             [fact.statement, rule.lhs, rule.rhs])
         ####################################################
         # Student code goes here
+        bindingsList = match(fact.statement, rule.lhs[0])
+        if bindingsList:
+
+            if len(rule.lhs)==1: # add new rule if lhs = 1
+                newState = instantiate(rule.rhs, bindingsList)
+                newFact = Fact(newState, supported_by=[[fact, rule]]) #Create new fact to infer
+                kb.kb_add(newFact) #Add fact to KB
+                newFact = kb._get_fact(newFact) #Update subsequent supported/supporting facts
+                fact.supports_facts.append(newFact)
+                rule.supports_facts.append(newFact)
+
+            elif len(rule.lhs)>1: # update inference engine with new lhs and rhs
+                newRight = instantiate(rule.rhs, bindingsList) #Create new rhs
+                newLeft = [instantiate(i, bindingsList) for i in rule.lhs[1:]] #Create new lhs
+                newRule = Rule([newLeft, newRight], supported_by=[[fact, rule]])
+                kb.kb_add(newRule) #Add new rule
+                newRule = kb._get_rule(newRule)
+                fact.supports_rules.append(newRule)
+                rule.supports_rules.append(newRule)
+                
+        else:
+            return
